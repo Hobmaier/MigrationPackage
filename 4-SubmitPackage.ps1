@@ -1,0 +1,1 @@
+﻿$jobresult = Submit-SPOMigrationJob –TargetwebUrl $targetweburl –MigrationPackageAzureLocations $uploadresult –Credentials $creds
