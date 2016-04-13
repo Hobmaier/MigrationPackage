@@ -1,0 +1,1 @@
+﻿$spjobresult = Submit-SPOMigrationJob -TargetWebUrl $sptargetweburl -MigrationPackageAzureLocations $spuploadresult
