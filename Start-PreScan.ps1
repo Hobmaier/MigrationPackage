@@ -20,11 +20,15 @@
    Provide a path including a filename to the logfile. By default same directory than the script.
 
 .EXAMPLE
-   Write-Log -Message 'Log message' 
-   Writes the message to c:\Logs\PowerShellLog.log.
+   Start-PreScan.ps1 -Sourcefolder c:\temp
+   This will scan the folder and all it's subfolders and items. Log will be created in scripts directory.
+
+.EXAMPLE
+   Start-PreScan.ps1 -Sourcefolder c:\temp -log c:\mylog.log
+   This will scan the folder and all it's subfolder and items. Log will be created here c:\mylog.log
 
 .LINK
-   https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0
+   https://support.office.com/en-us/article/Invalid-file-names-and-file-types-in-OneDrive-OneDrive-for-Business-and-SharePoint-64883a5d-228e-48f5-b3d2-eb39e07630fa#invalidcharacters
 #>
 param (
     [Parameter(Mandatory = $true)]
