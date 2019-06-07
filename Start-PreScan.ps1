@@ -11,6 +11,8 @@
    trust there will be a problem with 256 already.
 
    Changelog
+   V 1.1 - 07.06.2019: Added to logic to scan for root folders also one level deep (use case scanning
+                        all users homeshare root directory)
    V 1.0 - 06.06.2019: Created
 
 .PARAMETER Sourcefolder
@@ -93,10 +95,13 @@ $MaxFileSize = '16106127360' # 15 GB max file size in OneDrive
 Write-Verbose "Creating $log."
 New-Item $log -Force -ItemType File | Out-Null
 
-Get-ChildItem -path $Sourcefolder -Directory | foreach {
+# NFR11: Scan also one level depth
+# Example folder \\server\usershares$ will be scanned
+# But \\server\usershares$\dennis\forms is prohibited in SharePoint and wouldn't be recognized without this
+Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | foreach {
     foreach ($InvalidRootFolder in $InvalidRootFolders) {
         if ($_.Name.ToLower() -eq $InvalidRootFolder.ToLower()) {
-            Write-Output 'Invalid root folder '$InvalidRootFolder $_.FullName
+            Write-Output "Invalid root folder $($_.FullName)"
             'Invalid root folder,'+$InvalidRootFolder+','+$_.FullName | Out-File $log -Append
         }
     }     
