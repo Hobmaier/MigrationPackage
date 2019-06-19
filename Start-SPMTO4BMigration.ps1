@@ -216,7 +216,7 @@ foreach ($User in $Users)
                     -cmdRobocopyLog (Join-Path -path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix)) -ChildPath '_MigrationRobocopy.log' )
                 #Create individual migration plans within the loop
                 Add-SPMTTask -FileShareSource (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix)) `
-                    -TargetSiteUrl $DestinationSPOSite `
+                    -TargetSiteUrl $DestinationSPOSiteFoundUrl `
                     -TargetList 'Documents'
             } else {
                 Write-Host 'Source folder doesn`t exist, skipping user ' $User
@@ -231,7 +231,7 @@ foreach ($User in $Users)
             Move-Files -SourceDir $SourceDirectory -DestDir $DestinationDirectory
             #Create individual migration plans within the loop
             Add-SPMTTask -FileShareSource $DestinationDirectory `
-                    -TargetSiteUrl $DestinationSPOSite `
+                    -TargetSiteUrl $DestinationSPOSiteFoundUrl `
                     -TargetList 'Documents'
 
         }
