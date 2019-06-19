@@ -180,7 +180,7 @@ foreach ($User in $Users)
         Write-Host 'User has license'
         #Get Destination OneDrive URL
         $DestinationSPOSites = (get-sposite -IncludePersonalSite $true -Limit All)
-        foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -eq 'SPSPERS#10')})
+        foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -like 'SPSPERS#*')})
         {
             Write-Host 'OneDrive already created'
             $DestinationSPOSiteFoundUrl = $DestinationSPOSite.URL
@@ -193,7 +193,7 @@ foreach ($User in $Users)
             Start-Sleep -Seconds 5
             Write-Host 'Create OneDrive done'
             #Now determine URL
-            foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -eq 'SPSPERS#10')})
+            foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -like 'SPSPERS#*')})
             {
                 Write-Host 'OneDrive found'
                 $DestinationSPOSiteFoundUrl = $DestinationSPOSite.URL
