@@ -98,7 +98,7 @@ New-Item $log -Force -ItemType File | Out-Null
 # NFR11: Scan also one level depth
 # Example folder \\server\usershares$ will be scanned
 # But \\server\usershares$\dennis\forms is prohibited in SharePoint and wouldn't be recognized without this
-Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | foreach {
+Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | ForEach-Object {
     foreach ($InvalidRootFolder in $InvalidRootFolders) {
         if ($_.Name.ToLower() -eq $InvalidRootFolder.ToLower()) {
             Write-Output "Invalid root folder $($_.FullName)"
@@ -107,7 +107,7 @@ Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | foreach {
     }     
 }
 
-Get-ChildItem -path $Sourcefolder -Recurse | foreach {
+Get-ChildItem -path $Sourcefolder -Recurse | ForEach-Object {
     foreach ($searchstring in $searchstrings) {
         if ($_.Name -match "$searchstring") {
             Write-Host 'Invalid character ' $_.FullName
