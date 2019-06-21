@@ -107,7 +107,7 @@ function Move-Files {
     $cmdRobocopy = $cmdRobocopy + ' ' +`
         """$SourceDir""" + ' ' +`
         """$DestDir""" + ' ' +`
-        '/MOVE /E /R:5 /W:1 /XF *.pst /COPY:DATO /DCOPY:DAT /NP /UniLog:' + $cmdRobocopyLog
+        '/MOVE /E /R:5 /W:1 /XF *.pst /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
     Write-Host 'Run cmd' $cmdRobocopy
 
     Invoke-Expression $cmdRobocopy -ErrorAction SilentlyContinue
