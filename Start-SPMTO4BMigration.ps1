@@ -9,6 +9,7 @@
     .\Start-SPMTO4BMigration.ps1 -SourceDirectory c:\temp\users -UseMFAAuthentication -Users alans@avengers.hobi.ws -Tenant theavengers -UsersProfileMode
 .NOTES
    Changelog
+   V 1.2 - 21.06.2019: Added CSV Support for mass import
    V 1.1 - 19.06.2019: Included -Limit All in Get-SPOSite and handle multiple owners to determine OneDrive location
    V 1.0 - 18.06.2019: Created
 #>
@@ -24,9 +25,10 @@ Param(
     ParameterSetName='UserProfileRootDir')]
     $SourceDirectory,
 
-    #Define the users UPN going to migrate
-    [Parameter(Mandatory=$true)]
-    $Users,
+    #Define the users UPN going to migrate (single user or an array of multiple users)
+    [Parameter(Mandatory=$true,ParameterSetName='NoCSVImport')]
+    [Parameter(Mandatory=$true,ParameterSetName='SingleUser')]
+    [array]$Users,
 
     #Tenant URL e.g. https://contoso.sharepoint.com = contoso
     [Parameter(Mandatory=$true)]
@@ -66,7 +68,11 @@ Param(
     [string]$CustomStorageAccountName,
 
     # Define custom storage account key
-    [string]$CustomStorageAccountKey
+    [string]$CustomStorageAccountKey,
+
+    # Define a CSV file to import (single column with UPN name, no header)
+    [Parameter(Mandatory=$true,ParameterSetName='UserProfileRootDir')]
+    [string]$CSVFilePath
 )
 
 
@@ -161,6 +167,17 @@ If ($UseMFAAuthentication) {
             -MigrateFilesAndFoldersWithInvalidChars $true `
             -ErrorAction Stop        
         }     
+}
+
+#If CSV file is provided instead of individual users, import it and assign it to Users variable
+If ($PSBoundParameters.ContainsKey('CSVFilePath'))
+{
+    $Users = @()
+    $CSVUsers = Import-Csv -Path $CSVFilePath -Header 'UPN'
+    foreach ($CSVUser in $CSVUsers)
+    {
+        $Users += $CSVUser.UPN
+    }
 }
 
 foreach ($User in $Users)
