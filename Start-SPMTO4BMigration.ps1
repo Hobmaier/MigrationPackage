@@ -143,7 +143,7 @@ If ($UseMFAAuthentication) {
     
     #Register the SPMT session with SPO credentials#
     if ($CustomStorageAccountName.Length -gt 1) {
-        Register-SPMTMigration -Credential $cred -Force `
+        Register-SPMTMigration -SPOCredential $cred -Force `
             -MigrateOneNoteFolderAsOneNoteNoteBook $true `
             -SkipFilesWithExtension $ExludeFileExtensions `
             -MigrateHiddenFiles $true `
@@ -154,7 +154,7 @@ If ($UseMFAAuthentication) {
             -ErrorAction Stop
         } else {
             # No custom Azure storage
-            Register-SPMTMigration -Credential $cred -Force `
+            Register-SPMTMigration -SPOCredential $cred -Force `
             -MigrateOneNoteFolderAsOneNoteNoteBook $true `
             -SkipFilesWithExtension $ExludeFileExtensions `
             -MigrateHiddenFiles $true `
