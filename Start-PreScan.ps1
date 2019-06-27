@@ -11,6 +11,10 @@
    trust there will be a problem with 256 already.
 
    Changelog
+   V 1.2 - 27.06.2019: 
+            New: Added OneNote scan for large Notebooks 
+            New: Scan for blank at the end of a folder e.g. "foldername "
+            Fix: Added error handling (Access denied, long folder path) and do not create an error in CLI
    V 1.1 - 07.06.2019: Added to logic to scan for root folders also one level deep (use case scanning
                         all users homeshare root directory)
    V 1.0 - 06.06.2019: Created
@@ -39,6 +43,9 @@ param (
     [Parameter(Mandatory = $false)]
     $log = (Join-Path -Path $PSScriptRoot -ChildPath 'Start-PreScan.log')
 )
+
+#Make sure no errors are logged before running the script
+$Error.Clear()
 
 $searchstrings = @(
     '~'
@@ -90,7 +97,7 @@ $InvalidRootFolders = @(
 )
 # Create large dummy cmd: fsutil file createnew largefile15GB.pst 16106127360
 $MaxFileSize = '16106127360' # 15 GB max file size in OneDrive
-
+$WarningOneNoteFileSize = '10240000'
 
 Write-Verbose "Creating $log."
 New-Item $log -Force -ItemType File | Out-Null
@@ -98,7 +105,7 @@ New-Item $log -Force -ItemType File | Out-Null
 # NFR11: Scan also one level depth
 # Example folder \\server\usershares$ will be scanned
 # But \\server\usershares$\dennis\forms is prohibited in SharePoint and wouldn't be recognized without this
-Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | ForEach-Object {
+Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 -ErrorAction SilentlyContinue | ForEach-Object {
     foreach ($InvalidRootFolder in $InvalidRootFolders) {
         if ($_.Name.ToLower() -eq $InvalidRootFolder.ToLower()) {
             Write-Output "Invalid root folder $($_.FullName)"
@@ -107,7 +114,8 @@ Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 | ForEach-Object 
     }     
 }
 
-Get-ChildItem -path $Sourcefolder -Recurse | ForEach-Object {
+
+Get-ChildItem -path $Sourcefolder -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
     foreach ($searchstring in $searchstrings) {
         if ($_.Name -match "$searchstring") {
             Write-Host 'Invalid character ' $_.FullName
@@ -125,11 +133,26 @@ Get-ChildItem -path $Sourcefolder -Recurse | ForEach-Object {
             Write-Host 'Invalid name' $_.FullName
             'Invalid name,'+$InvalidName+','+$_.FullName | Out-File $log -Append
         }
-    }           
+    }         
+    if ($_.Name.EndsWith(" ")) {
+        Write-Host 'Space at the end ' $_.FullName
+        'Space at the end,space,'+$_.FullName | Out-File $log -Append        
+    }
 
     if ($_.Length -ge $MaxFileSize) {
         Write-Host 'Large File found ' $_.FullName
         'Large File found,'+$_.Length+','+$_.FullName | Out-File $log -Append
     }
+    #Check for large OneNote Files and generate Warning
+    if (($_.Length -ge $WarningOneNoteFileSize) -and ($_.Extension -eq '.one') )
+    {
+        Write-Host 'Large OneNote found ' $_.FullName
+        'Large OneNote found,'+$_.Length+','+$_.FullName | Out-File $log -Append
+    }
 }
 
+#Now collect all errors
+foreach ($ErrorDetail in $Error) {
+    Write-Host 'ERROR ' $ErrorDetail.exception
+    'ERROR,AccessError,'+$ErrorDetail.TargetObject | Out-File $log -Append
+}
