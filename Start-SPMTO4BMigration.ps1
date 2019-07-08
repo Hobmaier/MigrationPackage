@@ -460,31 +460,7 @@ foreach ($User in $Users)
             If (!(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix))))
                 { new-item -Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix)) -ItemType Directory | out-null}
             Write-Log ("Move files to " + (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix)))
-            If (Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@')))))) {
-                #Now move trash such as Desktop.ini, ost... Just leave .pst files
-                If (Get-DiskSpace -DiskName Z)
-                {
-                    If (!(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated'))))
-                    { new-item -Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) -ItemType Directory | out-null}                    
-                    #Check if still something in
-                    If(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))))
-                    {
-                        $MovedNonO4BFilesExitCode = Move-NonO4BFiles -SourceDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))) `
-                            -DestDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) `
-                            -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath ("OneDriveRobocopyNonO4B_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt"))
-                        #Same here, Exit code is an array an in the last one, there's the code
-                        Write-Log ("Robocopy exit code " + $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1])
-                        [int]$MovedNonO4BFilesExitCodeNumber = $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1]
-                        If ($MovedNonO4BFilesExitCodeNumber -le 7)
-                        {
-                            Write-Log "Moved NonO4B files completed for $User"
-                        } else {
-                            Write-Log "Critical robocopy error, skipping user $User" -Level Error
-                        }
-                    }
-                } else {
-                    Write-Log "No Disk space, skipping user $User" -Level Error
-                }                                
+            If (Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@')))))) {                               
                 If (Get-DiskSpace -DiskName Z)
                 {
                     $MovedFilesExitCode = Move-Files -SourceDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))) `
@@ -527,6 +503,30 @@ foreach ($User in $Users)
                 } else {
                     Write-Log "No Disk space, skipping user $User" -Level Error
                 }
+                #Now move trash such as Desktop.ini, ost... Just leave .pst files
+                If (Get-DiskSpace -DiskName Z)
+                {
+                    If (!(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated'))))
+                    { new-item -Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) -ItemType Directory | out-null}                    
+                    #Check if still something in
+                    If(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))))
+                    {
+                        $MovedNonO4BFilesExitCode = Move-NonO4BFiles -SourceDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))) `
+                            -DestDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) `
+                            -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath ("OneDriveRobocopyNonO4B_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt"))
+                        #Same here, Exit code is an array an in the last one, there's the code
+                        Write-Log ("Robocopy exit code " + $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1])
+                        [int]$MovedNonO4BFilesExitCodeNumber = $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1]
+                        If ($MovedNonO4BFilesExitCodeNumber -le 7)
+                        {
+                            Write-Log "Moved NonO4B files completed for $User"
+                        } else {
+                            Write-Log "Critical robocopy error, skipping user $User" -Level Error
+                        }
+                    }
+                } else {
+                    Write-Log "No Disk space, skipping user $User" -Level Error
+                }                 
             } else {
                 Write-Log "Source folder does not exist, skipping user $User" -Level Error
             }
