@@ -11,6 +11,13 @@
    trust there will be a problem with 256 already.
 
    Changelog
+   V 1.5 - 02.07.2019:
+            New: Added .ost to InvalidExtensions
+            New: Scan for Thumbs.db
+   V 1.4 - 28.06.2019:
+            Fix: Updated OneNote scan value from 10 to 100 MB
+   V 1.3 - 27.06.2019: 
+            New: Scan for Recycle Bin and hidden files
    V 1.2 - 27.06.2019: 
             New: Added OneNote scan for large Notebooks 
             New: Scan for blank at the end of a folder e.g. "foldername "
@@ -65,6 +72,7 @@ $searchstrings = @(
 #>
 $InvalidExtensions = @(
     '.pst'
+    '.ost'
 )
 $InvalidNames = @(
     '.lock'
@@ -91,13 +99,15 @@ $InvalidNames = @(
     'LPT8'
     'LPT9'
     'desktop.ini'
+    '$Recycle.Bin'
+    'Thumbs.db'
 )
 $InvalidRootFolders = @(
     'Forms'
 )
 # Create large dummy cmd: fsutil file createnew largefile15GB.pst 16106127360
 $MaxFileSize = '16106127360' # 15 GB max file size in OneDrive
-$WarningOneNoteFileSize = '10240000'
+$WarningOneNoteFileSize = '102400000' # Larger than 100 MB
 
 Write-Verbose "Creating $log."
 New-Item $log -Force -ItemType File | Out-Null
@@ -105,7 +115,7 @@ New-Item $log -Force -ItemType File | Out-Null
 # NFR11: Scan also one level depth
 # Example folder \\server\usershares$ will be scanned
 # But \\server\usershares$\dennis\forms is prohibited in SharePoint and wouldn't be recognized without this
-Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 -Attributes normal,directory,system,hidden,archive,readonly -ErrorAction SilentlyContinue | ForEach-Object {
     foreach ($InvalidRootFolder in $InvalidRootFolders) {
         if ($_.Name.ToLower() -eq $InvalidRootFolder.ToLower()) {
             Write-Output "Invalid root folder $($_.FullName)"
@@ -115,7 +125,7 @@ Get-ChildItem -path $Sourcefolder -Directory -Recurse -Depth 1 -ErrorAction Sile
 }
 
 
-Get-ChildItem -path $Sourcefolder -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ChildItem -path $Sourcefolder -Recurse -Attributes normal,directory,system,hidden,archive,readonly -ErrorAction SilentlyContinue | ForEach-Object {
     foreach ($searchstring in $searchstrings) {
         if ($_.Name -match "$searchstring") {
             Write-Host 'Invalid character ' $_.FullName
