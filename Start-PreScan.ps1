@@ -11,6 +11,7 @@
    trust there will be a problem with 256 already.
 
    Changelog
+   V 1.6 - 10.07.2019: New: Added cmdletbinding
    V 1.5 - 02.07.2019:
             New: Added .ost to InvalidExtensions
             New: Scan for Thumbs.db
@@ -43,6 +44,7 @@
 .LINK
    https://support.office.com/en-us/article/Invalid-file-names-and-file-types-in-OneDrive-OneDrive-for-Business-and-SharePoint-64883a5d-228e-48f5-b3d2-eb39e07630fa#invalidcharacters
 #>
+[CmdletBinding()]
 param (
     [Parameter(Mandatory = $true)]
     [ValidateScript({Test-Path $_})]
