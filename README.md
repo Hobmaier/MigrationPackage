@@ -15,3 +15,12 @@ PS C:\Users\dhobmaie\OneDrive - Hobi\Consulting\SharePoint\HighSpeedMigration\Mi
  
 Log is a “,” delimited filed – so you could rename it to CSV and open it with Excel to filter better on it:
  
+# Move-Log
+Small tool to support moving log files created by Start-PreScan (to separate them for each user). Ideally in conjuction when doing mass migration from home dir to OneDrive
+
+# Start-SPMTO4BMigration
+To run it use the following command for help: Get-help .\Start-SPMTO4BMigration.ps1
+
+This will use robocopy and SPMT (SharePoint Migration Toolkit) to move files from A to B and upload it into
+users OneDrive.
+It's perfectly made for fileshare where all user home dir's are located to do mass migration.
