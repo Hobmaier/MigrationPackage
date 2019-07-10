@@ -10,7 +10,6 @@
 .NOTES
    Changelog
    ToDo: By default MigrateFilesAndFoldersWithInvalidChars is false (for Performance)
-   ToDo: Change robocopy log file location
    
    V 1.5 - 02.07.2019: Fix: Increased robocopy timeout from 1 to 60 seconds
                 New: Check robocopy Exitcode
@@ -558,6 +557,7 @@ foreach ($User in $Users)
 
 }
 
+Write-Log 'Start SPMT Migration - status in console'
 #Start Migration in the console.
 Start-SPMTMigration    
 
