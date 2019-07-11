@@ -2,15 +2,25 @@
 .SYNOPSIS
     Migrate to Microsoft OneDrive using SPMT
 .DESCRIPTION
-    Use this script for personal Home folder to OneDrive Migration
+    Use this script for personal Home folder to OneDrive Migration.
+    IMPORTANT: Make Sure drive letter Z: is free as it will be used by the script for disk space check
 .EXAMPLE
     .\Start-SPMTO4BMigration.ps1 -SourceDirectory c:\temp\alans -DestinationDirectory c:\temp\alans_test -UseMFAAuthentication -Users alans@avengers.hobi.ws -Tenant theavengers
 .EXAMPLE
-    .\Start-SPMTO4BMigration.ps1 -SourceDirectory c:\temp\users -UseMFAAuthentication -Users alans@avengers.hobi.ws -Tenant theavengers -UsersProfileMode
+    .\Start-SPMTO4BMigration.ps1 -SourceDirectory c:\temp\users -UseMFAAuthentication -Users alans@avengers.hobi.ws -Tenant contoso -UsersProfileMode
+.EXAMPLE
+    $key = <Azure Storage Account Key>
+    $account = <Azure Storage Account name>
+    .\Start-SPMTO$BMigration.ps1 -SourceDirectory c:\temp\users -UsersProfileMode -Tenant contoso -CustomStorageAccountName $account -CustomStorageAccountKey $key -CSVFilePath c:\migration\usersUPN.csv
 .NOTES
    Changelog
    ToDo: By default MigrateFilesAndFoldersWithInvalidChars is false (for Performance)
    
+   V 1.6 - 11.07.2019: Fix: Decreased robocopy timeout from 60 to 1 second and retry from 5 to 0
+                    Fix: Robocopy error code can be minus as well, will raise an error now
+                    Fix: Move Trash files only if first robocopy was successful, otherwise skip this step
+                    New: PSDrive handling, assume it is always Z: and then
+                    New: Support starting the script multiple times in parallel
    V 1.5 - 02.07.2019: Fix: Increased robocopy timeout from 1 to 60 seconds
                 New: Check robocopy Exitcode
                 New: Exclude .OST File from robocopy (Outlook Cache file)
@@ -257,7 +267,7 @@ function Move-Files {
     $cmdRobocopy = $cmdRobocopy + ' ' +`
         """$SourceDir""" + ' ' +`
         """$DestDir""" + ' ' +`
-        '/MOVE /E /R:5 /W:60 /XF *.pst /XF *.ost /XF Thumbs.db /XF Desktop.ini /XD ''$Recycle.Bin'' /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
+        '/MOVE /E /R:0 /W:1 /XF *.pst /XF *.ost /XF Thumbs.db /XF Desktop.ini /XD ''$Recycle.Bin'' /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
     Write-Log "Run cmd $cmdRobocopy"
 
     Invoke-Expression $cmdRobocopy -ErrorAction SilentlyContinue
@@ -288,7 +298,7 @@ function Move-NonO4BFiles {
     $cmdRobocopy = $cmdRobocopy + ' ' +`
         """$SourceDir""" + ' ' +`
         """$DestDir""" + ' ' +`
-        '/MOVE /E /R:5 /W:60 /XF *.pst /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
+        '/MOVE /E /R:0 /W:1 /XF *.pst /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
     Write-Log "Run cmd $cmdRobocopy"
 
     Invoke-Expression $cmdRobocopy -ErrorAction SilentlyContinue
@@ -323,11 +333,18 @@ If ($UsersProfileMode)
     #New-PSDrive is different on share and local, so check
     If ($SourceDirectory.IndexOf(":\") -eq 1) {
         Write-Log 'Source is local disk'
-        New-PSDrive -Name 'Z' -PSProvider FileSystem -Root $SourceDirectory | Out-Null
+        #Check if already there, assume we are using always Z so we support starting the script multiple times
+        If (!(Get-PSDrive -Name 'Z' -ErrorAction SilentlyContinue))
+        {
+            New-PSDrive -Name 'Z' -PSProvider FileSystem -Root $SourceDirectory | Out-Null
+        }
     } else {
         Write-Log 'Source is UNC Share'
         # This works for network drive
-        New-PSDrive -Name 'Z' -PSProvider FileSystem -Root $SourceDirectory -Persist | Out-Null
+        If (!(Get-PSDrive -Name 'Z' -ErrorAction SilentlyContinue))
+        {
+            New-PSDrive -Name 'Z' -PSProvider FileSystem -Root $SourceDirectory -Persist | Out-Null
+        }
     }
     If (!(Get-DiskSpace -DiskName 'Z')) {
         Write-Log 'Not enough disk space' -Level 'Error'
@@ -471,7 +488,7 @@ foreach ($User in $Users)
                     #For some reason I get an object instead of pure Exit Code, so it is an array
                     #in the last field, there's the exit code
                     Write-Verbose $MovedFilesExitCode[$MovedFilesExitCode.Length-1]
-                    If ($MovedFilesExitCodeNumber -le 7)
+                    If (($MovedFilesExitCodeNumber -le 7) -and ($MovedFilesExitCodeNumber -ge 0))
                     {
                         #Create individual migration plans within the loop
                         Write-Log 'Add SPMT Task'
@@ -485,7 +502,30 @@ foreach ($User in $Users)
                             $ErrorMessage = $_.Exception.Message
                             Write-Log "Error: $ErrorMessage" -Level Error
                         }
-
+                        #Now move trash such as Desktop.ini, ost... Just leave .pst files
+                        If (Get-DiskSpace -DiskName Z)
+                        {
+                            If (!(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated'))))
+                            { new-item -Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) -ItemType Directory | out-null}                    
+                            #Check if still something in
+                            If(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))))
+                            {
+                                $MovedNonO4BFilesExitCode = Move-NonO4BFiles -SourceDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))) `
+                                    -DestDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) `
+                                    -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath ("OneDriveRobocopyNonO4B_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt"))
+                                #Same here, Exit code is an array an in the last one, there's the code
+                                Write-Log ("Robocopy exit code " + $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1])
+                                [int]$MovedNonO4BFilesExitCodeNumber = $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1]
+                                If (($MovedNonO4BFilesExitCodeNumber -le 7) -and ($MovedFilesExitCodeNumber -ge 0))
+                                {
+                                    Write-Log "Moved NonO4B files completed for $User"
+                                } else {
+                                    Write-Log "Critical robocopy error, skipping user $User" -Level Error
+                                }
+                            }
+                        } else {
+                            Write-Log "No Disk space, skipping user $User" -Level Error
+                        }                 
                     } else {
                         <#
                         CRITICAL ERROR (robocopy definition)
@@ -498,34 +538,12 @@ foreach ($User in $Users)
                                     on the source or destination directories.
                         #>
                         Write-Log "Critical robocopy error, skipping user $User" -Level Error
+                        Write-Log "Skipping Non4B robocopy for $User as well" -Level Error
                     }
                 } else {
                     Write-Log "No Disk space, skipping user $User" -Level Error
                 }
-                #Now move trash such as Desktop.ini, ost... Just leave .pst files
-                If (Get-DiskSpace -DiskName Z)
-                {
-                    If (!(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated'))))
-                    { new-item -Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) -ItemType Directory | out-null}                    
-                    #Check if still something in
-                    If(Test-Path (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))))
-                    {
-                        $MovedNonO4BFilesExitCode = Move-NonO4BFiles -SourceDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))))) `
-                            -DestDir (Join-Path -path $SourceDirectory -ChildPath (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix + '_NotMigrated')) `
-                            -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath ("OneDriveRobocopyNonO4B_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt"))
-                        #Same here, Exit code is an array an in the last one, there's the code
-                        Write-Log ("Robocopy exit code " + $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1])
-                        [int]$MovedNonO4BFilesExitCodeNumber = $MovedNonO4BFilesExitCode[$MovedNonO4BFilesExitCode.Length-1]
-                        If ($MovedNonO4BFilesExitCodeNumber -le 7)
-                        {
-                            Write-Log "Moved NonO4B files completed for $User"
-                        } else {
-                            Write-Log "Critical robocopy error, skipping user $User" -Level Error
-                        }
-                    }
-                } else {
-                    Write-Log "No Disk space, skipping user $User" -Level Error
-                }                 
+
             } else {
                 Write-Log "Source folder does not exist, skipping user $User" -Level Error
             }
@@ -570,4 +588,5 @@ Write-Log "Migration took $Duration"
 $DestinationSPOSites = $null
 $CSVUsers = $null
 Disconnect-SPOService
-Remove-PSDrive -Name Z
+# Leave the drive to support starting the script multiple times
+#Remove-PSDrive -Name Z
