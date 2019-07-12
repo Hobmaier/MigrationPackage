@@ -19,7 +19,7 @@
    V 1.6 - 11.07.2019: Fix: Decreased robocopy timeout from 60 to 1 second and retry from 5 to 0
                     Fix: Robocopy error code can be minus as well, will raise an error now
                     Fix: Move Trash files only if first robocopy was successful, otherwise skip this step
-                    New: PSDrive handling, assume it is always Z: and then
+                    New: PSDrive handling, assume it is always Z: and then do not cleanup
                     New: Support starting the script multiple times in parallel
    V 1.5 - 02.07.2019: Fix: Increased robocopy timeout from 1 to 60 seconds
                 New: Check robocopy Exitcode
