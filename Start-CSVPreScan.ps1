@@ -15,6 +15,7 @@
    Created by: Dennis Hobmaier
 
    Changelog
+   V 1.1 - 16.07.2019: Create summary file
    V 1.0 - 12.07.2019: Initial
 
 #>
@@ -63,3 +64,11 @@ foreach ($log in $logs)
         }
     }
 }
+
+Write-Host 'Create summary file'
+#Create summary log
+#Get Base name of CSV first
+$summaryfilename = $CSVFilePath.Substring(($CSVFilePath.LastIndexOf('\') +1),($CSVFilePath.Length - $CSVFilePath.LastIndexOf('\')-1))
+$summaryfilename = $summaryfilename.Split('.')
+Get-ChildItem .\pre_*.log | Get-Content | Out-File .\"_PreScanSummary_$($summaryfilename[0]).csv"
+Write-Host 'Done'
