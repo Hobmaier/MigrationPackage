@@ -15,7 +15,9 @@
 .NOTES
    Changelog
    ToDo: By default MigrateFilesAndFoldersWithInvalidChars is false (for Performance)
-   
+
+   V 1.8 - 17.07.2019: Fix: Now cache SharePoint sites before the users loop, before that no cache
+   V 1.7 - 17.07.2019: New: Exclude *.pst.tmp from robocopy because Outlook temp file
    V 1.6 - 11.07.2019: Fix: Decreased robocopy timeout from 60 to 1 second and retry from 5 to 0
                     Fix: Robocopy error code can be minus as well, will raise an error now
                     Fix: Move Trash files only if first robocopy was successful, otherwise skip this step
@@ -267,12 +269,11 @@ function Move-Files {
     $cmdRobocopy = $cmdRobocopy + ' ' +`
         """$SourceDir""" + ' ' +`
         """$DestDir""" + ' ' +`
-        '/MOVE /E /R:0 /W:1 /XF *.pst /XF *.ost /XF Thumbs.db /XF Desktop.ini /XD ''$Recycle.Bin'' /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
+        '/MOVE /E /R:0 /W:1 /XF *.pst /XF *.ost /XF Thumbs.db /XF Desktop.ini /XF *.pst.tmp /XD ''$Recycle.Bin'' /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
     Write-Log "Run cmd $cmdRobocopy"
 
     Invoke-Expression $cmdRobocopy -ErrorAction SilentlyContinue
 
-    Write-log "Exitcode $lastexitcode"
     return $lastexitcode
     Write-Verbose 'Leave Move-Files'
 }
@@ -298,12 +299,11 @@ function Move-NonO4BFiles {
     $cmdRobocopy = $cmdRobocopy + ' ' +`
         """$SourceDir""" + ' ' +`
         """$DestDir""" + ' ' +`
-        '/MOVE /E /R:0 /W:1 /XF *.pst /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
+        '/MOVE /E /R:0 /W:1 /XF *.pst /XF *.pst.tmp /COPY:DATO /DCOPY:DAT /NP /V /UniLog:' + $cmdRobocopyLog
     Write-Log "Run cmd $cmdRobocopy"
 
     Invoke-Expression $cmdRobocopy -ErrorAction SilentlyContinue
 
-    Write-log "Exitcode $lastexitcode" 
     return $Lastexitcode
     Write-Verbose 'Leave MoveNonO4B-Files'
 }
@@ -430,6 +430,11 @@ If ($PSBoundParameters.ContainsKey('CSVFilePath'))
     }
 }
 
+#Receive all SharePoint sites once and cache it
+Write-Log 'Get all SharePoint sites'
+$DestinationSPOSites = (get-sposite -IncludePersonalSite $true -Limit All)
+Write-Log 'All SharePoint sites received and cached'
+
 foreach ($User in $Users)
 {
     #Get Users with SharePoint/OneDrive license
@@ -445,7 +450,6 @@ foreach ($User in $Users)
     if ($Licensed) {
         Write-Log 'User has license'
         #Get Destination OneDrive URL
-        $DestinationSPOSites = (get-sposite -IncludePersonalSite $true -Limit All)
         foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -like 'SPSPERS#*')})
         {
             Write-Log 'OneDrive already created'
