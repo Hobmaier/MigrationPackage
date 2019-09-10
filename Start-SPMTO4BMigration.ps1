@@ -16,6 +16,7 @@
    Changelog
    ToDo: By default MigrateFilesAndFoldersWithInvalidChars is false (for Performance)
 
+   V 1.9 - 10.09.2019: Fix: Increased timeout after initial OneDrive Creation from 5 up to 120 seconds
    V 1.8 - 17.07.2019: Fix: Now cache SharePoint sites before the users loop, before that no cache
    V 1.7 - 17.07.2019: New: Exclude *.pst.tmp from robocopy because Outlook temp file
    V 1.6 - 11.07.2019: Fix: Decreased robocopy timeout from 60 to 1 second and retry from 5 to 0
@@ -460,7 +461,8 @@ foreach ($User in $Users)
             Write-Log 'Create OneDrive'
             #PreProvision OneDrive
             Request-SPOPersonalSite -UserEmails $User
-            Start-Sleep -Seconds 5
+            #Creation takes some time around 90 seconds in my case
+            Start-Sleep -Seconds 120
             Write-Log 'Create OneDrive done'
             #Now determine URL
             foreach ($DestinationSPOSite in $DestinationSPOSites | Where-Object {($_.Owner -eq $User) -and ($_.Template -like 'SPSPERS#*')})
