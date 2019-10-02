@@ -15,7 +15,9 @@
 .NOTES
    Changelog
    ToDo: By default MigrateFilesAndFoldersWithInvalidChars is false (for Performance)
+   ToDo: Single User mode doesn't care about O4B_NotMigrated folder (trash)
 
+   V 2.0 - 02.10.2019: Fix: Single user mode fix when creating the log, just before move
    V 1.9 - 10.09.2019: Fix: Increased timeout after initial OneDrive Creation from 5 up to 120 seconds
    V 1.8 - 17.07.2019: Fix: Now cache SharePoint sites before the users loop, before that no cache
    V 1.7 - 17.07.2019: New: Exclude *.pst.tmp from robocopy because Outlook temp file
@@ -561,8 +563,8 @@ foreach ($User in $Users)
             Write-Log "Move files to $DestinationDirectory"
             $MovedFilesExitCode = Move-Files -SourceDir $SourceDirectory `
                                 -DestDir $DestinationDirectory `
-                                -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath "OneDriveMigration_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt")
-            Write-Log "Robocopy exit code $MovedFilesExitCode[$MovedFilesExitCode.Length-1]"
+                                -cmdRobocopyLog (Join-path -path $PSScriptRoot -ChildPath ("OneDriveRobocopy_log_" + (($User.Substring(0,$User.indexof('@'))) + $DestinationDirectoryPostFix) + $date + ".txt"))
+            Write-Log ("Robocopy exit code " + $MovedFilesExitCode[$MovedFilesExitCode.Length-1])
             [int]$MovedFilesExitCodeNumber = $MovedFilesExitCode[$MovedFilesExitCode.Length-1]
 
             If ($MovedFilesExitCodeNumber -le 7) {
